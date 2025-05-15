@@ -5,11 +5,11 @@ import { Stack, Tabs } from 'expo-router'
 const RootLayout = () => {
   return (
         <Stack>
-            <Stack.Screen name="index" options={{ title: 'Home'}} />
-            <Stack.Screen name="about" options={{ title: 'About'}} />
-            <Stack.Screen name="signup" options={{ title: 'Sign Up'}} />
-            <Stack.Screen name="login" options={{ title: 'Log In'}} />
-            <Stack.Screen name="forgotpassword" options={{ title: 'Forgot Password'}} />
+            <Stack.Screen name="index" options={{ title: 'Home', headerShown: false}} />
+            <Stack.Screen name="about" options={{ title: 'About', headerShown: false}} />
+            <Stack.Screen name="signup" options={{ title: 'Sign Up', headerShown: false}} />
+            <Stack.Screen name="login" options={{ title: 'Log In', headerShown: false}} />
+            <Stack.Screen name="forgotpassword" options={{ title: 'Forgot Password', headerShown: false}} />
         </Stack>
   )
 }
