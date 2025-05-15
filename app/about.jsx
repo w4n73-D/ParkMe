@@ -10,10 +10,9 @@ const About = () => {
         About Page
       </Text>
 
-      <Link href= "/" style={styles.link}>
-        Back Home
+      <Link href= "/dash/dashboard" style={styles.link}>
+        Check free Lots
       </Link>
-
     </View>
   )
 }

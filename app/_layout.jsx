@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import { Stack } from 'expo-router'
+import { Stack, Tabs } from 'expo-router'
 
 const RootLayout = () => {
   return (
@@ -10,7 +10,7 @@ const RootLayout = () => {
             <Stack.Screen name="signup" options={{ title: 'Sign Up'}} />
             <Stack.Screen name="login" options={{ title: 'Log In'}} />
             <Stack.Screen name="forgotpassword" options={{ title: 'Forgot Password'}} />
-        </Stack>  
+        </Stack>
   )
 }
 
