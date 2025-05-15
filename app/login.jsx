@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 
-
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = () => {
    const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,11 +37,26 @@ const LoginScreen = ({ navigation }) => {
 
   const handleLogin = () => {
     if (validateForm()) {
-      // Here you would typically call your authentication API
-      Alert.alert('Login Successful', `Welcome ${email}`);
-      // navigation.navigate('Home'); // Uncomment to navigate after login
+      // Since we're not connecting to a database, we'll just redirect to dashboard
+      // when the form validation passes
+      console.log('Login successful, redirecting to dashboard');
+
+      // Show a success message before redirecting
+      Alert.alert(
+        'Login Successful',
+        `Welcome ${email}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Navigate to the dashboard
+              router.push('/dash/dashboard');
     }
-  };
+          }
+        ]
+  );
+    }
+};
 
   return (
     <KeyboardAvoidingView
@@ -56,9 +70,9 @@ const LoginScreen = ({ navigation }) => {
           style={styles.logo}
           resizeMode="contain"
         />
-        
+
         <Text style={styles.title}>Welcome Back</Text>
-        
+
         {/* Email Input */}
         <TextInput
           style={styles.input}
@@ -69,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={setEmail}
         />
         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-        
+
         {/* Password Input */}
         <TextInput
           style={styles.input}
@@ -79,26 +93,23 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={setPassword}
         />
         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-        
+
         {/* Login Button */}
         <TouchableOpacity style={styles.button} onPress={handleLogin}>
           <Text style={styles.buttonText}>Login</Text>
         </TouchableOpacity>
-        
+
         {/* Forgot Password */}
         <TouchableOpacity onPress={() => router.push('/forgotpassword')}>
           <Text style={styles.linkText}>Forgot Password?</Text>
         </TouchableOpacity>
-        
+
         {/* Sign Up */}
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('SignUp')}>
-            <Link href="/signup">
-                <Text style={styles.linkText}>Sign Up</Text>
-            </Link>
-            
-          </TouchableOpacity>
+          <Link href="/signup">
+            <Text style={styles.linkText}>Sign Up</Text>
+          </Link>
         </View>
       </View>
     </KeyboardAvoidingView>
