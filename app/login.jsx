@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 
 const LoginScreen = () => {
    const router = useRouter();
@@ -35,13 +36,54 @@ const LoginScreen = () => {
     return isValid;
   };
 
+  const requestLocationPermission = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status === 'granted') {
+        // Location permissions granted, proceed to dashboard
+              router.push('/dash/dashboard');
+      } else {
+        // Show alert that location is required but still allow to proceed
+        Alert.alert(
+          'Location Services Required',
+          'For the best parking experience, please enable location services. Some features may be limited without location access.',
+          [
+            {
+              text: 'Continue without location',
+              onPress: () => router.push('/dash/dashboard'),
+              style: 'cancel'
+  },
+            {
+              text: 'Open Settings',
+              onPress: () => {
+                // This would ideally open device settings, but requires additional setup
+                // For now, we'll just navigate to dashboard
+                Alert.alert(
+                  'Settings',
+                  'Please enable location services in your device settings, then return to the app.',
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => router.push('/dash/dashboard')
+                    }
+                  ]
+                );
+              }
+            }
+          ]
+        );
+      }
+    } catch (err) {
+      console.warn('Error requesting location permission:', err);
+      // If there's an error requesting permissions, still allow user to proceed
+      router.push('/dash/dashboard');
+    }
+  };
+
   const handleLogin = () => {
     if (validateForm()) {
-      // Since we're not connecting to a database, we'll just redirect to dashboard
-      // when the form validation passes
-      console.log('Login successful, redirecting to dashboard');
-
-      // Show a success message before redirecting
+      // Show a success message before requesting location
       Alert.alert(
         'Login Successful',
         `Welcome ${email}`,
@@ -49,14 +91,14 @@ const LoginScreen = () => {
           {
             text: 'OK',
             onPress: () => {
-              // Navigate to the dashboard
-              router.push('/dash/dashboard');
-    }
+              // After successful login, request location permissions
+              requestLocationPermission();
+            }
           }
         ]
-  );
+      );
     }
-};
+  };
 
   return (
     <KeyboardAvoidingView
