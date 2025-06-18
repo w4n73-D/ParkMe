@@ -9,14 +9,16 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/img/parkme_logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to find nearby parking spots."
+        "NSLocationWhenInUseUsageDescription": "This app needs access to your location to find nearby parking spots.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to your location to provide parking notifications and find nearby spots.",
+        "UIBackgroundModes": ["location", "remote-notification"]
       }
     },
     "android": {
@@ -25,13 +27,28 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "permissions": ["ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/img/parkme_logo.png",
+          "color": "#0066cc",
+          "sounds": ["./assets/sounds/notification.wav"]
+        }
+      ]
     ]
   }
 }

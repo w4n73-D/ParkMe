@@ -13,12 +13,14 @@ import {
 } from "react-native";
 import { Link, useRouter } from "expo-router";
 import * as Location from "expo-location";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useAuth } from "./context/AuthContext";
 
 const API_URL = "https://parkme-api-hk4a.onrender.com";
+// const API_URL = "http://localhost:3000";
 
 const LoginScreen = () => {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -72,9 +74,8 @@ const LoginScreen = () => {
         console.log(data);
 
         if (data.token) {
-          // Store the token in AsyncStorage
-          await AsyncStorage.setItem("token", data.token);
-          await AsyncStorage.setItem("user", JSON.stringify(data.user));
+          // Use the AuthContext to handle login
+          await login(data.user, data.token);
           requestLocationPermission();
         }
       } catch (error) {
@@ -82,6 +83,8 @@ const LoginScreen = () => {
       } finally {
         setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
   };
 

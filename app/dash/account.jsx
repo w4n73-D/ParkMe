@@ -8,24 +8,27 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  SafeAreaView,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { router } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 const Account = () => {
-  const [user, setUser] = useState(null);
+  const { user, logout, updateUser } = useAuth();
   const [editing, setEditing] = useState(false);
-  const [tempUser, setTempUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [tempUser, setTempUser] = useState(null);
 
   const API_URL = "https://parkme-api-hk4a.onrender.com";
 
   const handleSave = async () => {
     try {
       setLoading(true);
-      const userId = await AsyncStorage.getItem("userId");
+      const userId = user.id;
       const response = await fetch(`${API_URL}/user/${userId}`, {
         method: "PUT",
         headers: {
@@ -39,8 +42,8 @@ const Account = () => {
       }
 
       const updatedUser = await response.json();
-      await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
-      setUser(updatedUser);
+      await updateUser(updatedUser);
+      setTempUser(updatedUser);
       setEditing(false);
       Alert.alert("Success", "Profile updated successfully");
     } catch (error) {
@@ -62,11 +65,8 @@ const Account = () => {
 
   const handleFetchUser = async () => {
     try {
-      const userData = await AsyncStorage.getItem("user");
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setTempUser(parsedUser);
+      if (user) {
+        setTempUser(user);
         setImageError(false);
       }
     } catch (error) {
@@ -77,7 +77,7 @@ const Account = () => {
 
   useEffect(() => {
     handleFetchUser();
-  }, []);
+  }, [user]);
 
   if (!user) {
     return (
@@ -97,7 +97,7 @@ const Account = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={{ backgroundColor: "#0066cc", flex: 1 }}>
       <View style={styles.header}>
         <View style={styles.profileSection}>
           <Image
@@ -119,126 +119,157 @@ const Account = () => {
 
         <Text style={styles.headerText}>Account Settings</Text>
       </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-          {!editing ? (
-            <TouchableOpacity
-              onPress={() => {
-                setEditing(true);
-              }}
-            >
-              <Ionicons name="create-outline" size={24} color="#0066cc" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.editButtons}>
+      <ScrollView style={styles.container}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Personal Information</Text>
+            {!editing ? (
               <TouchableOpacity
-                onPress={handleCancel}
-                style={styles.cancelButton}
+                onPress={() => {
+                  setEditing(true);
+                }}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
+                <Ionicons name="create-outline" size={24} color="#0066cc" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-                <Text style={styles.saveButtonText}>Save</Text>
-              </TouchableOpacity>
+            ) : (
+              <View style={styles.editButtons}>
+                <TouchableOpacity
+                  onPress={handleCancel}
+                  style={styles.cancelButton}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSave}
+                  style={styles.saveButton}
+                >
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.infoContainer}>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Name</Text>
+              {editing ? (
+                <TextInput
+                  value={user.firstName + " " + user.lastName}
+                  onChangeText={(text) =>
+                    setTempUser({
+                      ...tempUser,
+                      firstName: text.split(" ")[0],
+                      lastName: text.split(" ")[1],
+                    })
+                  }
+                  style={styles.textInput}
+                />
+              ) : (
+                <Text style={styles.infoValue}>
+                  {user.firstName} {user.lastName}
+                </Text>
+              )}
             </View>
-          )}
-        </View>
 
-        <View style={styles.infoContainer}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name</Text>
-            {editing ? (
-              <TextInput
-                value={tempUser.firstName}
-                onChangeText={(text) =>
-                  setTempUser({ ...tempUser, firstName: text })
-                }
-                style={styles.textInput}
-              />
-            ) : (
-              <Text style={styles.infoValue}>
-                {user.firstName} {user.lastName}
-              </Text>
-            )}
-          </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email</Text>
+              {editing ? (
+                <TextInput
+                  value={user.email}
+                  onChangeText={(text) =>
+                    setTempUser({ ...tempUser, email: text })
+                  }
+                  style={styles.textInput}
+                  keyboardType="email-address"
+                />
+              ) : (
+                <Text style={styles.infoValue}>{user.email}</Text>
+              )}
+            </View>
 
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email</Text>
-            {editing ? (
-              <TextInput
-                value={tempUser.email}
-                onChangeText={(text) =>
-                  setTempUser({ ...tempUser, email: text })
-                }
-                style={styles.textInput}
-                keyboardType="email-address"
-              />
-            ) : (
-              <Text style={styles.infoValue}>{user.email}</Text>
-            )}
-          </View>
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone</Text>
-            {editing ? (
-              <TextInput
-                value={tempUser.phone}
-                onChangeText={(text) =>
-                  setTempUser({ ...tempUser, phone: text })
-                }
-                style={styles.textInput}
-                keyboardType="phone-pad"
-              />
-            ) : (
-              <Text style={styles.infoValue}>{user.phone}</Text>
-            )}
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone</Text>
+              {editing ? (
+                <TextInput
+                  value={tempUser.phone}
+                  onChangeText={(text) =>
+                    setTempUser({ ...tempUser, phone: text })
+                  }
+                  style={styles.textInput}
+                  keyboardType="phone-pad"
+                />
+              ) : (
+                <Text style={styles.infoValue}>{user.phone}</Text>
+              )}
+            </View>
           </View>
         </View>
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Actions</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Actions</Text>
 
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="lock-closed-outline" size={22} color="#333" />
-          <Text style={styles.actionText}>Change Password</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#999"
-            style={styles.actionArrow}
-          />
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push("/change-password")}
+          >
+            <Ionicons name="lock-closed-outline" size={22} color="#333" />
+            <Text style={styles.actionText}>Change Password</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#999"
+              style={styles.actionArrow}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push("/notification-settings")}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#333" />
+            <Text style={styles.actionText}>Notification Settings</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#999"
+              style={styles.actionArrow}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push("/privacy-settings")}
+          >
+            <Ionicons name="shield-checkmark-outline" size={22} color="#333" />
+            <Text style={styles.actionText}>Privacy Settings</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#999"
+              style={styles.actionArrow}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={() => {
+            Alert.alert("Log Out", "Are you sure you want to log out?", [
+              {
+                text: "Cancel",
+                style: "cancel",
+              },
+              {
+                text: "Log Out",
+                onPress: logout,
+              },
+            ]);
+          }}
+        >
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="notifications-outline" size={22} color="#333" />
-          <Text style={styles.actionText}>Notification Settings</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#999"
-            style={styles.actionArrow}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.actionButton}>
-          <Ionicons name="shield-checkmark-outline" size={22} color="#333" />
-          <Text style={styles.actionText}>Privacy Settings</Text>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color="#999"
-            style={styles.actionArrow}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Log Out</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -249,8 +280,13 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#0066cc",
-    paddingTop: 40,
-    paddingBottom: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
     alignItems: "center",
   },
   profileSection: {

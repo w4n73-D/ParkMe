@@ -16,7 +16,8 @@ import { Link, useRouter } from "expo-router";
 import Logo from "../assets/img/parkme_logo.png";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
-const API_URL = "https://parkme-api-hk4a.onrender.com";
+// const API_URL = "https://parkme-api-hk4a.onrender.com";
+const API_URL = "http://localhost:3000";
 
 const SignUp = () => {
   const router = useRouter();
