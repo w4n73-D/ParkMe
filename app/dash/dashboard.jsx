@@ -133,10 +133,7 @@ const Dashboard = () => {
     <SafeAreaView style={{ backgroundColor: "#0066cc", flex: 1 }}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.headerText}>Dashboard</Text>
-          <Text style={styles.welcomeText}>
-            Welcome back, {user?.firstName || "User"}! 👋
-          </Text>
+          <Text style={styles.headerText}>DASHBOARD</Text>
         </View>
 
         <View style={styles.content}>
@@ -278,12 +275,12 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#0066cc",
-    paddingVertical: 20,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: "center",
   },
   headerText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     color: "white",
     marginBottom: 5,

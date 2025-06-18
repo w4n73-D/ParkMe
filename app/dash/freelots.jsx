@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#0066cc",
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingHorizontal: 20,
     alignItems: "center",
   },
@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "white",
+    marginBottom: 5,
   },
   statsContainer: {
     flexDirection: "row",
