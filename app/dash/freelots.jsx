@@ -8,6 +8,7 @@ import {
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 
 const Freelots = () => {
   // Sample data for available lots
@@ -15,7 +16,7 @@ const Freelots = () => {
     { id: "A1", available: true },
     { id: "A2", available: true },
     { id: "A3", available: false },
-    { id: "A4", available: true },
+    { id: "A4", available: false },
     { id: "B1", available: true },
     { id: "B2", available: false },
     { id: "B3", available: true },
@@ -34,6 +35,10 @@ const Freelots = () => {
   const renderLot = (lot) => (
     <TouchableOpacity
       key={lot.id}
+      onPress={() => {
+        console.log(lot.id);
+        router.navigate(`/lot?lot=${lot.id}`);
+      }}
       style={[
         styles.lotItem,
         lot.available ? styles.availableLot : styles.unavailableLot,

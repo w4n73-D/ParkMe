@@ -4,7 +4,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Image,
   TextInput,
   Alert,
   ActivityIndicator,
@@ -15,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useAuth } from "../context/AuthContext";
+import { Image } from "expo-image";
+import { pickImageAsync } from "expo-image-picker";
 
 const Account = () => {
   const { user, logout, updateUser } = useAuth();
@@ -24,6 +25,13 @@ const Account = () => {
   const [tempUser, setTempUser] = useState(null);
 
   const API_URL = "https://parkme-api-hk4a.onrender.com";
+
+  const handleImageChange = async () => {
+    const image = await pickImageAsync();
+    if (image) {
+      setTempUser({ ...tempUser, image: image.uri });
+    }
+  };
 
   const handleSave = async () => {
     try {
@@ -88,6 +96,10 @@ const Account = () => {
   }
 
   const getProfileImage = () => {
+    if (user.image) {
+      return user.image;
+    }
+
     if (imageError) {
       return "https://api.dicebear.com/7.x/notionists/svg?seed=default";
     }
@@ -101,16 +113,12 @@ const Account = () => {
       <View style={styles.header}>
         <View style={styles.profileSection}>
           <Image
-            source={{
-              uri: getProfileImage(),
-            }}
+            source={{ uri: getProfileImage() }}
             style={styles.profileImage}
             onError={() => setImageError(true)}
           />
           <TouchableOpacity
-            onPress={() => {
-              setEditing(true);
-            }}
+            onPress={handleImageChange}
             style={styles.editImageButton}
           >
             <Ionicons name="camera" size={22} color="white" />
@@ -292,6 +300,8 @@ const styles = StyleSheet.create({
   profileSection: {
     position: "relative",
     marginBottom: 10,
+    backgroundColor: "white",
+    borderRadius: 100,
   },
   profileImage: {
     width: 100,

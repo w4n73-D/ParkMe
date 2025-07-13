@@ -45,6 +45,10 @@ const RootLayout = () => {
             name="privacy-settings"
             options={{ title: "Privacy Settings", headerShown: false }}
           />
+          <Stack.Screen
+            name="lot"
+            options={{ title: "Lot", headerShown: false }}
+          />
         </Stack>
       </AuthWrapper>
     </AuthProvider>

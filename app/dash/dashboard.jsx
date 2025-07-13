@@ -111,7 +111,6 @@ const Dashboard = () => {
         "This is a test notification from ParkMe!",
         { type: "test" }
       );
-      Alert.alert("Test Notification Sent", "Check your notification panel!");
     } catch (error) {
       console.error("Error sending test notification:", error);
     }
@@ -123,7 +122,6 @@ const Dashboard = () => {
         "Downtown Parking Garage",
         15
       );
-      Alert.alert("Reminder Sent", "Parking reminder notification sent!");
     } catch (error) {
       console.error("Error sending parking reminder:", error);
     }
@@ -164,87 +162,10 @@ const Dashboard = () => {
             </View>
           </View>
 
-          {/* Location Controls */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location Controls</Text>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.primaryButton]}
-                onPress={
-                  isLocationTracking
-                    ? stopLocationTracking
-                    : startLocationTracking
-                }
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <>
-                    <Ionicons
-                      name={isLocationTracking ? "stop" : "play"}
-                      size={20}
-                      color="white"
-                    />
-                    <Text style={styles.buttonText}>
-                      {isLocationTracking ? "Stop Tracking" : "Start Tracking"}
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.secondaryButton]}
-                onPress={initializeLocation}
-                disabled={loading}
-              >
-                <Ionicons name="refresh" size={20} color="#0066cc" />
-                <Text style={[styles.buttonText, { color: "#0066cc" }]}>
-                  Refresh Location
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Nearby Parking Spots */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              Nearby Parking Spots ({nearbySpots.length})
-            </Text>
-            {nearbySpots.length > 0 ? (
-              nearbySpots.slice(0, 3).map((spot) => (
-                <View key={spot.id} style={styles.spotItem}>
-                  <View style={styles.spotInfo}>
-                    <Text style={styles.spotName}>{spot.name}</Text>
-                    <Text style={styles.spotAddress}>{spot.address}</Text>
-                    <Text style={styles.spotDistance}>
-                      {spot.distance}m away
-                    </Text>
-                  </View>
-                  <View style={styles.spotPrice}>
-                    <Text style={styles.priceText}>{spot.price}</Text>
-                  </View>
-                </View>
-              ))
-            ) : (
-              <Text style={styles.noSpotsText}>
-                No parking spots found nearby
-              </Text>
-            )}
-          </View>
-
           {/* Test Notifications */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Test Notifications</Text>
             <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.testButton]}
-                onPress={simulateParkingSpotFound}
-              >
-                <Ionicons name="car" size={20} color="white" />
-                <Text style={styles.buttonText}>Simulate Spot Found</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[styles.button, styles.testButton]}
                 onPress={sendTestNotification}
