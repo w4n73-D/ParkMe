@@ -58,8 +58,22 @@ class LocationService {
   // Request location permissions
   async requestPermissions() {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      return status === "granted";
+      const { status: foregroundStatus } =
+        await Location.requestForegroundPermissionsAsync();
+      if (foregroundStatus !== "granted") {
+        console.error("Foreground location permission not granted");
+        return false;
+      }
+
+      const { status: backgroundStatus } =
+        await Location.requestBackgroundPermissionsAsync();
+      if (backgroundStatus !== "granted") {
+        console.error("Background location permission not granted");
+        // Depending on your app's needs, you might want to handle this differently.
+        // For now, we'll return true if foreground is granted, as background might be optional.
+      }
+
+      return true;
     } catch (error) {
       console.error("Error requesting location permissions:", error);
       return false;

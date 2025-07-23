@@ -85,6 +85,20 @@ class NotificationService {
         console.log("Notification response:", response);
         this.handleNotificationResponse(response);
       });
+
+    // Return an object with a remove method for cleanup
+    return {
+      remove: () => {
+        if (this.notificationListener) {
+          Notifications.removeNotificationSubscription(
+            this.notificationListener
+          );
+        }
+        if (this.responseListener) {
+          Notifications.removeNotificationSubscription(this.responseListener);
+        }
+      },
+    };
   }
 
   // Handle notification response
@@ -202,6 +216,23 @@ class NotificationService {
       });
     } catch (error) {
       console.error("Error sending custom notification:", error);
+    }
+  }
+
+  // Send proximity notification when user is near parking lots
+  async sendProximityNotification(title, body) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          data: { type: "proximity_alert" },
+          sound: "default",
+        },
+        trigger: null, // Send immediately
+      });
+    } catch (error) {
+      console.error("Error sending proximity notification:", error);
     }
   }
 

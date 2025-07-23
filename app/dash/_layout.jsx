@@ -8,10 +8,10 @@ const RootLayout = () => {
       <Tabs.Screen
         name="freelots"
         options={{
-          title: "Free Lots",
+          title: "Detect Free Lots",
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="car" color={color} size={size} />
+            <MaterialCommunityIcons name="camera" color={color} size={size} />
           ),
         }}
       />

@@ -1,15 +1,15 @@
 {
   "expo": {
-    "scheme": "ParkMe",
+    "scheme": "parkme",
     "name": "ParkMe",
     "slug": "ParkMe",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/img/parkme_logo.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/img/parkme_logo.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -40,13 +40,18 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ParkMe to access your camera"
+        }
+      ],
       "expo-router",
       [
         "expo-notifications",
         {
-          "icon": "./assets/img/parkme_logo.png",
-          "color": "#0066cc",
-          "sounds": ["./assets/sounds/notification.wav"]
+          "icon": "./assets/icon.png",
+          "color": "#0066cc"
         }
       ]
     ]

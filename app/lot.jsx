@@ -19,7 +19,7 @@ const lotImages = [lot1, lot2, lot3, lot4];
 
 function LotScreen() {
   const { lot } = useLocalSearchParams();
-  console.log(lot);
+  console.log("lot:", lot);
   return (
     <SafeAreaView style={styles.container}>
       <View
@@ -42,7 +42,7 @@ function LotScreen() {
           />
         </View>
         <Text style={styles.headerText}>
-          Lot <Text style={{ color: "blue" }}>{lot}</Text>
+          <Text>{lot}</Text>
         </Text>
         <View style={styles.headerButton}></View>
       </View>

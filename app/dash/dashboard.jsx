@@ -11,21 +11,34 @@ import {
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "../context/AuthContext";
+import MapView, { Marker, Circle } from "react-native-maps";
 import locationService from "../services/LocationService";
 import notificationService from "../services/NotificationService";
+import { useAuth } from "../context/AuthContext";
 
 const Dashboard = () => {
-  const { user } = useAuth();
   const [isLocationTracking, setIsLocationTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [nearbySpots, setNearbySpots] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [region, setRegion] = useState({
+    latitude: 37.78825,
+    longitude: -122.4324,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
 
   useEffect(() => {
     initializeLocation();
+    notificationService.initialize();
+    const notificationSubscription =
+      notificationService.setupNotificationListeners();
+
     return () => {
       locationService.stopLocationTracking();
+      if (notificationSubscription && notificationSubscription.remove) {
+        notificationSubscription.remove();
+      }
     };
   }, []);
 
@@ -35,7 +48,9 @@ const Dashboard = () => {
       const location = await locationService.getCurrentLocation();
       if (location) {
         setCurrentLocation(location);
+        updateMapRegion(location);
         updateNearbySpots();
+        checkProximityToParkingLots(location);
       }
     } catch (error) {
       console.error("Error initializing location:", error);
@@ -44,9 +59,28 @@ const Dashboard = () => {
     }
   };
 
+  const updateMapRegion = (location) => {
+    setRegion({
+      latitude: location.latitude,
+      longitude: location.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+  };
+
   const updateNearbySpots = () => {
     const spots = locationService.findNearbyParkingSpots(1000); // 1km radius
     setNearbySpots(spots);
+  };
+
+  const checkProximityToParkingLots = (location) => {
+    const nearbyLots = locationService.findNearbyParkingSpots(300); // 300m radius
+    if (nearbyLots.length > 0) {
+      notificationService.sendProximityNotification(
+        `You're near ${nearbyLots.length} parking lot(s)!`,
+        `Check the map for available spots.`
+      );
+    }
   };
 
   const startLocationTracking = async () => {
@@ -82,28 +116,6 @@ const Dashboard = () => {
     );
   };
 
-  const simulateParkingSpotFound = async () => {
-    setLoading(true);
-    try {
-      const spot = await locationService.simulateParkingSpotFound();
-      if (spot) {
-        Alert.alert(
-          "Parking Spot Found!",
-          `Great! You found a spot at ${spot.name} (${spot.distance}m away)`
-        );
-      } else {
-        Alert.alert(
-          "No Nearby Spots",
-          "No parking spots found within 300m of your location."
-        );
-      }
-    } catch (error) {
-      console.error("Error simulating parking spot found:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const sendTestNotification = async () => {
     try {
       await notificationService.sendCustomNotification(
@@ -116,75 +128,85 @@ const Dashboard = () => {
     }
   };
 
-  const sendParkingReminder = async () => {
-    try {
-      await notificationService.sendParkingReminderNotification(
-        "Downtown Parking Garage",
-        15
-      );
-    } catch (error) {
-      console.error("Error sending parking reminder:", error);
-    }
-  };
-
   return (
     <SafeAreaView style={{ backgroundColor: "#0066cc", flex: 1 }}>
-      <ScrollView style={styles.container}>
+      <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.headerText}>DASHBOARD</Text>
         </View>
 
-        <View style={styles.content}>
-          {/* Location Status */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Location Services</Text>
-            <View style={styles.statusContainer}>
-              <View style={styles.statusItem}>
-                <Ionicons
-                  name={currentLocation ? "location" : "location-outline"}
-                  size={24}
-                  color={currentLocation ? "#4CAF50" : "#FF9800"}
-                />
-                <Text style={styles.statusText}>
-                  {currentLocation ? "Location Active" : "Location Inactive"}
-                </Text>
-              </View>
-              <View style={styles.statusItem}>
-                <Ionicons
-                  name={isLocationTracking ? "radio" : "radio-outline"}
-                  size={24}
-                  color={isLocationTracking ? "#4CAF50" : "#FF9800"}
-                />
-                <Text style={styles.statusText}>
-                  {isLocationTracking ? "Tracking Active" : "Tracking Inactive"}
-                </Text>
-              </View>
+        <View style={styles.mapContainer}>
+          <MapView
+            style={styles.map}
+            region={region}
+            showsUserLocation={true}
+            showsMyLocationButton={true}
+          >
+            {currentLocation && (
+              <Circle
+                center={currentLocation}
+                radius={300}
+                strokeColor="rgba(0, 102, 204, 0.3)"
+                fillColor="rgba(0, 102, 204, 0.1)"
+              />
+            )}
+            {nearbySpots.map((spot, index) => (
+              <Marker
+                key={index}
+                coordinate={{
+                  latitude: spot.latitude,
+                  longitude: spot.longitude,
+                }}
+                title={spot.name}
+                description={`${spot.availableSpots} spots available`}
+                pinColor={spot.availableSpots > 0 ? "green" : "red"}
+              />
+            ))}
+          </MapView>
+          {loading && (
+            <View style={styles.loadingOverlay}>
+              <ActivityIndicator size="large" color="#0066cc" />
             </View>
-          </View>
-
-          {/* Test Notifications */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Test Notifications</Text>
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.button, styles.testButton]}
-                onPress={sendTestNotification}
-              >
-                <Ionicons name="notifications" size={20} color="white" />
-                <Text style={styles.buttonText}>Test Notification</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.testButton]}
-                onPress={sendParkingReminder}
-              >
-                <Ionicons name="time" size={20} color="white" />
-                <Text style={styles.buttonText}>Send Reminder</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          )}
         </View>
-      </ScrollView>
+
+        <View style={styles.controlsContainer}>
+          <TouchableOpacity
+            style={[
+              styles.button,
+              isLocationTracking
+                ? styles.secondaryButton
+                : styles.primaryButton,
+            ]}
+            onPress={
+              isLocationTracking ? stopLocationTracking : startLocationTracking
+            }
+            disabled={loading}
+          >
+            <Ionicons
+              name={isLocationTracking ? "stop-circle" : "play-circle"}
+              size={24}
+              color={isLocationTracking ? "#0066cc" : "white"}
+            />
+            <Text
+              style={[
+                styles.buttonText,
+                isLocationTracking && styles.secondaryButtonText,
+              ]}
+            >
+              {isLocationTracking ? "Stop Tracking" : "Start Tracking"}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, styles.refreshButton]}
+            onPress={initializeLocation}
+            disabled={loading}
+          >
+            <Ionicons name="refresh" size={24} color="white" />
+            <Text style={styles.buttonText}>Refresh</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 };
@@ -196,7 +218,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: "#0066cc",
-    paddingVertical: 10,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     alignItems: "center",
   },
@@ -204,65 +226,54 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     color: "white",
-    marginBottom: 5,
   },
-  welcomeText: {
-    fontSize: 16,
-    color: "white",
-    opacity: 0.9,
+  mapContainer: {
+    flex: 1,
+    position: "relative",
   },
-  content: {
-    padding: 20,
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
-  section: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 15,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
-  },
-  statusContainer: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-  },
-  statusItem: {
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    justifyContent: "center",
     alignItems: "center",
   },
-  statusText: {
-    marginTop: 5,
-    fontSize: 14,
-    color: "#666",
-  },
-  buttonContainer: {
+  controlsContainer: {
+    position: "absolute",
+    bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    justifyContent: "space-around",
     gap: 10,
   },
   button: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 15,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
     gap: 10,
   },
   primaryButton: {
     backgroundColor: "#0066cc",
+    flex: 1,
   },
   secondaryButton: {
     backgroundColor: "white",
     borderWidth: 1,
     borderColor: "#0066cc",
+    flex: 1,
   },
-  testButton: {
+  refreshButton: {
     backgroundColor: "#4CAF50",
   },
   buttonText: {
@@ -270,47 +281,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  spotItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
-  },
-  spotInfo: {
-    flex: 1,
-  },
-  spotName: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
-  },
-  spotAddress: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 2,
-  },
-  spotDistance: {
-    fontSize: 12,
+  secondaryButtonText: {
     color: "#0066cc",
-    marginTop: 2,
-  },
-  spotPrice: {
-    backgroundColor: "#0066cc",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 15,
-  },
-  priceText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  noSpotsText: {
-    textAlign: "center",
-    color: "#666",
-    fontStyle: "italic",
   },
 });
 
