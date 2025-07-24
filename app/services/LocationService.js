@@ -96,6 +96,22 @@ class LocationService {
       return this.currentLocation;
     } catch (error) {
       console.error("Error getting current location:", error);
+
+      // If fetching current location fails, try to get the last known location
+      try {
+        const lastKnownLocation = await Location.getLastKnownPositionAsync();
+        if (lastKnownLocation) {
+          this.currentLocation = {
+            latitude: lastKnownLocation.coords.latitude,
+            longitude: lastKnownLocation.coords.longitude,
+            accuracy: lastKnownLocation.coords.accuracy,
+          };
+          return this.currentLocation;
+        }
+      } catch (lastKnownError) {
+        console.error("Error getting last known location:", lastKnownError);
+      }
+
       return null;
     }
   }

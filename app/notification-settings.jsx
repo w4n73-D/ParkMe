@@ -16,9 +16,6 @@ import notificationService from "./services/NotificationService";
 const NotificationSettings = () => {
   const [settings, setSettings] = useState({
     parkingReminders: true,
-    paymentNotifications: true,
-    promotionalOffers: false,
-    securityAlerts: true,
     nearbyParking: true,
     welcomeNotifications: true,
   });
@@ -95,10 +92,6 @@ const NotificationSettings = () => {
         "This is a test notification to verify your settings!",
         { type: "test" }
       );
-      Alert.alert(
-        "Test Sent",
-        "Check your notification panel for the test notification!"
-      );
     } catch (error) {
       console.error("Error sending test notification:", error);
       Alert.alert("Error", "Failed to send test notification");
@@ -153,7 +146,7 @@ const NotificationSettings = () => {
             <View style={styles.settingInfo}>
               <Text style={styles.settingTitle}>Parking Reminders</Text>
               <Text style={styles.settingDescription}>
-                Get notified before your parking session expires
+                Receive reminders when you're close to available parking spots
               </Text>
             </View>
             <Switch
@@ -161,51 +154,6 @@ const NotificationSettings = () => {
               onValueChange={() => toggleSetting("parkingReminders")}
               trackColor={{ false: "#767577", true: "#81b0ff" }}
               thumbColor={settings.parkingReminders ? "#0066cc" : "#f4f3f4"}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Payment Notifications</Text>
-              <Text style={styles.settingDescription}>
-                Receive notifications about payment status and receipts
-              </Text>
-            </View>
-            <Switch
-              value={settings.paymentNotifications}
-              onValueChange={() => toggleSetting("paymentNotifications")}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={settings.paymentNotifications ? "#0066cc" : "#f4f3f4"}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Promotional Offers</Text>
-              <Text style={styles.settingDescription}>
-                Get notified about special deals and discounts
-              </Text>
-            </View>
-            <Switch
-              value={settings.promotionalOffers}
-              onValueChange={() => toggleSetting("promotionalOffers")}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={settings.promotionalOffers ? "#0066cc" : "#f4f3f4"}
-            />
-          </View>
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Security Alerts</Text>
-              <Text style={styles.settingDescription}>
-                Receive important security-related notifications
-              </Text>
-            </View>
-            <Switch
-              value={settings.securityAlerts}
-              onValueChange={() => toggleSetting("securityAlerts")}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-              thumbColor={settings.securityAlerts ? "#0066cc" : "#f4f3f4"}
             />
           </View>
         </View>

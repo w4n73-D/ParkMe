@@ -9,7 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Circle } from "react-native-maps";
 import locationService from "../services/LocationService";
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [nearbySpots, setNearbySpots] = useState([]);
   const [loading, setLoading] = useState(false);
+  const mapRef = useRef(null);
   const [region, setRegion] = useState({
     latitude: 37.78825,
     longitude: -122.4324,
@@ -41,6 +42,20 @@ const Dashboard = () => {
       }
     };
   }, []);
+
+  const centerOnUser = () => {
+    if (currentLocation && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000
+      );
+    }
+  };
 
   const initializeLocation = async () => {
     setLoading(true);
@@ -137,10 +152,11 @@ const Dashboard = () => {
 
         <View style={styles.mapContainer}>
           <MapView
+            ref={mapRef}
             style={styles.map}
             region={region}
             showsUserLocation={true}
-            showsMyLocationButton={true}
+            showsMyLocationButton={false}
           >
             {currentLocation && (
               <Circle
@@ -163,6 +179,9 @@ const Dashboard = () => {
               />
             ))}
           </MapView>
+          <TouchableOpacity style={styles.centerButton} onPress={centerOnUser}>
+            <Ionicons name="locate" size={24} color="#0066cc" />
+          </TouchableOpacity>
           {loading && (
             <View style={styles.loadingOverlay}>
               <ActivityIndicator size="large" color="#0066cc" />
@@ -248,6 +267,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     gap: 10,
+  },
+  centerButton: {
+    position: "absolute",
+    bottom: 90,
+    right: 20,
+    backgroundColor: "white",
+    borderRadius: 30,
+    padding: 10,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   button: {
     flexDirection: "row",
