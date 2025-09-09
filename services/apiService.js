@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://768c2675ece0.ngrok-free.app";
+const API_BASE_URL = "https://94b3e384b81e.ngrok-free.app";
 
 export const ParkingAPI = {
   // Get current parking status from camera

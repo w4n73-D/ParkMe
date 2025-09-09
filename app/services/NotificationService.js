@@ -1,3 +1,4 @@
+// services/NotificationService.js
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
@@ -22,7 +23,6 @@ class NotificationService {
   // Initialize notification service
   async initialize() {
     try {
-      // Request permissions
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -37,23 +37,17 @@ class NotificationService {
         return false;
       }
 
-      // Get push token
       if (Device.isDevice) {
         this.expoPushToken = await Notifications.getExpoPushTokenAsync({
-          projectId: "your-project-id", // Replace with your Expo project ID
+          projectId: "your-project-id",
         });
-        console.log("Push token:", this.expoPushToken.data);
-
-        // Store token in AsyncStorage
         await AsyncStorage.setItem("pushToken", this.expoPushToken.data);
       } else {
         console.log("Must use physical device for Push Notifications");
       }
 
-      // Set up notification listeners
       this.setupNotificationListeners();
 
-      // Configure notification channel for Android
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
           name: "default",
@@ -72,29 +66,22 @@ class NotificationService {
 
   // Set up notification listeners
   setupNotificationListeners() {
-    // Listen for incoming notifications
     this.notificationListener = Notifications.addNotificationReceivedListener(
       (notification) => {
         console.log("Notification received:", notification);
       }
     );
 
-    // Listen for notification responses (when user taps notification)
     this.responseListener =
       Notifications.addNotificationResponseReceivedListener((response) => {
         console.log("Notification response:", response);
         this.handleNotificationResponse(response);
       });
 
-    // Return an object with a remove method for cleanup
     return {
       remove: () => {
-        if (this.notificationListener) {
-          this.notificationListener.remove();
-        }
-        if (this.responseListener) {
-          this.responseListener.remove();
-        }
+        this.notificationListener?.remove();
+        this.responseListener?.remove();
       },
     };
   }
@@ -104,23 +91,85 @@ class NotificationService {
     const { notification } = response;
     const data = notification.request.content.data;
 
-    // Handle different notification types
     switch (data.type) {
       case "welcome":
-        // Navigate to dashboard
+        break;
+      case "nearby_parking":
+        console.log("User tapped nearby parking notification:", data);
         break;
       case "parking_spot_found":
-        // Navigate to parking details
         break;
       case "parking_reminder":
-        // Navigate to parking session
+        break;
+      case "proximity_alert":
         break;
       default:
         break;
     }
   }
 
-  // Send welcome notification 5 seconds after login
+  // Send nearby parking notification with real data
+  async sendNearbyParkingNotification(spotName, distance, availableSpots) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Parking Spot Nearby! 🎯",
+          body: `${spotName} - ${availableSpots} spots available (${distance}m away)`,
+          data: {
+            type: "nearby_parking",
+            spotName,
+            distance,
+            availableSpots
+          },
+          sound: "default",
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error("Error sending nearby parking notification:", error);
+    }
+  }
+
+  // Send notification when user finds a parking spot
+  async sendParkingSpotFoundNotification(spotName, address, availableSpots = 0) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Parking Spot Found! ✅",
+          body: `Great! You found ${availableSpots} spots at ${spotName}, ${address}`,
+          data: {
+            type: "parking_spot_found",
+            spotName,
+            address,
+            availableSpots
+          },
+          sound: "default",
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error("Error sending parking spot found notification:", error);
+    }
+  }
+
+  // Send proximity notification when user is near parking lots
+  async sendProximityNotification(title, body) {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: title || "🚗 Parking Nearby!",
+          body: body || "You're close to available parking spots",
+          data: { type: "proximity_alert" },
+          sound: "default",
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.error("Error sending proximity notification:", error);
+    }
+  }
+
+  // Send welcome notification
   async sendWelcomeNotification(userName) {
     try {
       await Notifications.scheduleNotificationAsync({
@@ -134,48 +183,6 @@ class NotificationService {
       });
     } catch (error) {
       console.error("Error sending welcome notification:", error);
-    }
-  }
-
-  // Send notification when user is close to a parking spot
-  async sendNearbyParkingNotification(spotName, distance) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Parking Spot Nearby! 🎯",
-          body: `${spotName} is only ${distance}m away. Tap to navigate!`,
-          data: {
-            type: "nearby_parking",
-            spotName,
-            distance,
-          },
-          sound: "default",
-        },
-        trigger: null, // Send immediately
-      });
-    } catch (error) {
-      console.error("Error sending nearby parking notification:", error);
-    }
-  }
-
-  // Send notification when user finds a parking spot
-  async sendParkingSpotFoundNotification(spotName, address) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Parking Spot Found! ✅",
-          body: `Great! You found a spot at ${spotName}, ${address}`,
-          data: {
-            type: "parking_spot_found",
-            spotName,
-            address,
-          },
-          sound: "default",
-        },
-        trigger: null, // Send immediately
-      });
-    } catch (error) {
-      console.error("Error sending parking spot found notification:", error);
     }
   }
 
@@ -193,7 +200,7 @@ class NotificationService {
           },
           sound: "default",
         },
-        trigger: null, // Send immediately
+        trigger: null,
       });
     } catch (error) {
       console.error("Error sending parking reminder notification:", error);
@@ -210,27 +217,10 @@ class NotificationService {
           data,
           sound: "default",
         },
-        trigger: null, // Send immediately
+        trigger: null,
       });
     } catch (error) {
       console.error("Error sending custom notification:", error);
-    }
-  }
-
-  // Send proximity notification when user is near parking lots
-  async sendProximityNotification(title, body) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data: { type: "proximity_alert" },
-          sound: "default",
-        },
-        trigger: null, // Send immediately
-      });
-    } catch (error) {
-      console.error("Error sending proximity notification:", error);
     }
   }
 
@@ -260,15 +250,6 @@ class NotificationService {
     }
   }
 
-  // Cancel specific notification
-  async cancelNotification(notificationId) {
-    try {
-      await Notifications.cancelScheduledNotificationAsync(notificationId);
-    } catch (error) {
-      console.error("Error canceling notification:", error);
-    }
-  }
-
   // Get push token
   getPushToken() {
     return this.expoPushToken?.data;
@@ -276,12 +257,8 @@ class NotificationService {
 
   // Clean up listeners
   cleanup() {
-    if (this.notificationListener) {
-      this.notificationListener.remove();
-    }
-    if (this.responseListener) {
-      this.responseListener.remove();
-    }
+    this.notificationListener?.remove();
+    this.responseListener?.remove();
   }
 }
 

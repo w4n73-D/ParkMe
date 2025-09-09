@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
 import { useRouter } from "expo-router";
 import { Asset } from "expo-asset";
 import { ParkingAPI } from "../../services/apiService"; // Import the API service
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 
 const lotImages = [
   require("../../assets/lots/lot1.jpg"),
@@ -33,6 +35,67 @@ const FreeLots = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [activeTab, setActiveTab] = useState("all"); // "all" or "favorites"
+  const [favorites, setFavorites] = useState([]);
+
+  // Load favorites from storage on component mount
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const storedFavorites = await AsyncStorage.getItem("favoriteLots");
+      if (storedFavorites) {
+        setFavorites(JSON.parse(storedFavorites));
+      }
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+    }
+  };
+
+  const toggleFavorite = async (lotIndex) => {
+    try {
+      let newFavorites;
+      if (favorites.includes(lotIndex)) {
+        newFavorites = favorites.filter((fav) => fav !== lotIndex);
+      } else {
+        newFavorites = [...favorites, lotIndex];
+      }
+      
+      setFavorites(newFavorites);
+      await AsyncStorage.setItem("favoriteLots", JSON.stringify(newFavorites));
+    } catch (error) {
+      console.error("Error saving favorite:", error);
+      Alert.alert("Error", "Failed to update favorites");
+    }
+  };
+
+  const saveParkingHistory = async (lotNumber, freeSpots, totalSpots = "N/A") => {
+    try {
+      const historyItem = {
+        lotNumber,
+        freeSpots,
+        totalSpots,
+        timestamp: new Date().toISOString(),
+      };
+
+      const storedHistory = await AsyncStorage.getItem("parkingHistory");
+      let history = storedHistory ? JSON.parse(storedHistory) : [];
+      
+      // Add new item to beginning of array
+      history.unshift(historyItem);
+      
+      // Keep only last 100 items to prevent storage issues
+      if (history.length > 100) {
+        history = history.slice(0, 100);
+      }
+      
+      await AsyncStorage.setItem("parkingHistory", JSON.stringify(history));
+    } catch (error) {
+      console.error("Error saving parking history:", error);
+    }
+  };
 
   const handleImagePress = async (index) => {
     setSelectedImage(index);
@@ -48,6 +111,9 @@ const FreeLots = () => {
       console.log("API Response:", response);
       
       if (response.success) {
+        // Save to parking history
+        await saveParkingHistory(index + 1, response.emptySlots.toString());
+        
         const paramsForNextPage = {
           free_spots: response.emptySlots.toString(),
           total_spots: "N/A", // You might want to calculate this from predictions
@@ -72,6 +138,11 @@ const FreeLots = () => {
     }
   };
 
+  // Filter lots based on active tab
+  const filteredLots = activeTab === "favorites" 
+    ? lotImages.filter((_, index) => favorites.includes(index))
+    : lotImages;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -79,30 +150,75 @@ const FreeLots = () => {
         <Text style={styles.subHeaderText}>Live camera feed analysis</Text>
       </View>
 
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === "all" && styles.activeTab]}
+          onPress={() => setActiveTab("all")}
+        >
+          <Text style={[styles.tabText, activeTab === "all" && styles.activeTabText]}>
+            All Lots
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, activeTab === "favorites" && styles.activeTab]}
+          onPress={() => setActiveTab("favorites")}
+        >
+          <Text style={[styles.tabText, activeTab === "favorites" && styles.activeTabText]}>
+            Favorites
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView style={styles.content}>
-        <View style={styles.gridContainer}>
-          {lotImages.map((image, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.imageContainer}
-              onPress={() => handleImagePress(index)}
-              disabled={loading}
-            >
-              <Image source={image} style={styles.image} />
-              <View style={styles.imageOverlay}>
-                <Text style={styles.imageText}>Lot {index + 1}</Text>
-                <Text style={styles.cameraText}>Camera {lotCameraMapping[index]}</Text>
-              </View>
-              
-              {loading && selectedImage === index && (
-                <View style={styles.loadingOverlay}>
-                  <ActivityIndicator size="large" color="#ffffff" />
-                  <Text style={styles.loadingText}>Analyzing live feed...</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </View>
+        {filteredLots.length === 0 && activeTab === "favorites" ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="heart-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyStateText}>No favorite lots yet</Text>
+            <Text style={styles.emptyStateSubText}>
+              Tap the heart icon on any lot to add it to favorites
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.gridContainer}>
+            {filteredLots.map((image, index) => {
+              const originalIndex = lotImages.indexOf(image);
+              return (
+                <TouchableOpacity
+                  key={originalIndex}
+                  style={styles.imageContainer}
+                  onPress={() => handleImagePress(originalIndex)}
+                  disabled={loading}
+                >
+                  <Image source={image} style={styles.image} />
+                  <View style={styles.imageOverlay}>
+                    <Text style={styles.imageText}>Lot {originalIndex + 1}</Text>
+                    <Text style={styles.cameraText}>Camera {lotCameraMapping[originalIndex]}</Text>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.favoriteButton}
+                    onPress={() => toggleFavorite(originalIndex)}
+                    disabled={loading}
+                  >
+                    <Ionicons 
+                      name={favorites.includes(originalIndex) ? "heart" : "heart-outline"} 
+                      size={24} 
+                      color={favorites.includes(originalIndex) ? "#ff4757" : "white"} 
+                    />
+                  </TouchableOpacity>
+                  
+                  {loading && selectedImage === originalIndex && (
+                    <View style={styles.loadingOverlay}>
+                      <ActivityIndicator size="large" color="#ffffff" />
+                      <Text style={styles.loadingText}>Analyzing live feed...</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
         
         <View style={styles.infoContainer}>
           <Text style={styles.infoText}>
@@ -113,6 +229,9 @@ const FreeLots = () => {
           </Text>
           <Text style={styles.infoText}>
             🅿️ Tap any lot to see current availability
+          </Text>
+          <Text style={styles.infoText}>
+            ❤️ Tap the heart icon to add to favorites
           </Text>
         </View>
       </ScrollView>
@@ -142,6 +261,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "rgba(255,255,255,0.8)",
     marginTop: 5,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#0066cc",
+    borderBottomWidth: 1,
+    borderBottomColor: "#0052a3",
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  activeTab: {
+    borderBottomWidth: 3,
+    borderBottomColor: "white",
+  },
+  tabText: {
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
+  },
+  activeTabText: {
+    color: "white",
+    fontWeight: "bold",
   },
   content: {
     flex: 1,
@@ -189,6 +331,14 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
   },
+  favoriteButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
+    padding: 5,
+  },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -211,6 +361,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#666",
     marginBottom: 8,
+  },
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    marginTop: 50,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#666",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateSubText: {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
   },
 });
 

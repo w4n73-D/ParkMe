@@ -124,6 +124,21 @@ const Account = () => {
               style={styles.actionArrow}
             />
           </TouchableOpacity>
+
+          {/* New Parking History Button */}
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => router.push("/parking-history")}
+          >
+            <Ionicons name="time-outline" size={22} color="#333" />
+            <Text style={styles.actionText}>Parking History</Text>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color="#999"
+              style={styles.actionArrow}
+            />
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
