@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Alert,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Image as ExpoImage } from "expo-image";
@@ -26,6 +27,7 @@ const LotAnalysis = () => {
   const processed_image = params.processed_image || params.image;
   const timestamp = params.timestamp;
   const message = params.message;
+  const camera_index = params.cameraIndex || params.camera_index || "0";
 
   useEffect(() => {
     if (params && Object.keys(params).length > 0) {
@@ -38,6 +40,36 @@ const LotAnalysis = () => {
 
   const handleRetry = () => {
     router.back();
+  };
+
+  // Function to open Google Maps with directions to the parking lot
+  const openGoogleMapsDirections = async () => {
+    try {
+      // Map camera index to parking lot coordinates
+      const lotCoordinates = {
+        "0": { latitude: 6.672834, longitude: -1.567513, name: "Lot 1" }, // Camera 0 -> Lot 1
+        "1": { latitude: 6.673744, longitude: -1.567504, name: "Lot 2" }, // Camera 1 -> Lot 2
+        "2": { latitude: 37.79025, longitude: -122.4344, name: "Lot 3" }, // Camera 2 -> Lot 3
+        "3": { latitude: 37.79125, longitude: -122.4354, name: "Lot 4" }, // Camera 3 -> Lot 4
+      };
+
+      const lot = lotCoordinates[camera_index] || lotCoordinates["0"];
+      
+      // Create Google Maps URL for turn-by-turn navigation
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}&travelmode=driving&dir_action=navigate`;
+      
+      // Open Google Maps
+      const supported = await Linking.canOpenURL(url);
+      
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert("Error", "Google Maps is not available on this device");
+      }
+    } catch (error) {
+      console.error("Error opening Google Maps:", error);
+      Alert.alert("Error", "Could not open Google Maps");
+    }
   };
 
   if (loading) {
@@ -99,6 +131,12 @@ const LotAnalysis = () => {
             )}
           </View>
 
+          {/* Camera Info */}
+          <View style={styles.cameraInfo}>
+            <Ionicons name="camera" size={16} color="#666" />
+            <Text style={styles.cameraText}>Camera {parseInt(camera_index) + 1} (Lot {parseInt(camera_index) + 1})</Text>
+          </View>
+
           {/* Status Message */}
           {message && (
             <View style={styles.messageContainer}>
@@ -152,13 +190,21 @@ const LotAnalysis = () => {
             
             <TouchableOpacity 
               style={[styles.actionButton, styles.primaryButton]}
-              onPress={handleRetry}
+              onPress={openGoogleMapsDirections}
             >
-              <Ionicons name="refresh" size={20} color="white" />
+              <Ionicons name="navigate" size={20} color="white" />
               <Text style={[styles.actionButtonText, styles.primaryButtonText]}>
-                Refresh Analysis
+                Take Me There
               </Text>
             </TouchableOpacity>
+          </View>
+
+          {/* Directions Info */}
+          <View style={styles.directionsInfo}>
+            <Ionicons name="information-circle-outline" size={16} color="#0066cc" />
+            <Text style={styles.directionsText}>
+              "Take Me There" will open Google Maps with turn-by-turn directions to Lot {parseInt(camera_index) + 1}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -262,6 +308,21 @@ const styles = StyleSheet.create({
     color: "#666",
     marginTop: 4,
   },
+  cameraInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+    backgroundColor: "#f0f8ff",
+    padding: 8,
+    borderRadius: 5,
+  },
+  cameraText: {
+    marginLeft: 5,
+    fontSize: 14,
+    color: "#0066cc",
+    fontWeight: "500",
+  },
   messageContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -341,6 +402,20 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "white",
+  },
+  directionsInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#e6f7ff",
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 15,
+  },
+  directionsText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: "#0066cc",
+    flex: 1,
   },
 });
 

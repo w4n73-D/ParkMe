@@ -2,7 +2,7 @@
   "expo": {
     "scheme": "parkme",
     "name": "ParkMe",
-    "slug": "ParkMe",
+    "slug": "parkme",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -18,7 +18,14 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "This app needs access to your location to find nearby parking spots.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "This app needs access to your location to provide parking notifications and find nearby spots.",
-        "UIBackgroundModes": ["location", "remote-notification"]
+        "UIBackgroundModes": [
+          "location",
+          "remote-notification"
+        ],
+        "LSApplicationQueriesSchemes": ["googlechromes", "comgooglemaps"]
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyAE2VDeLrKdRCGfzUBacujqO3FhzLTjKHY"
       }
     },
     "android": {
@@ -33,8 +40,15 @@
         "ACCESS_BACKGROUND_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "WAKE_LOCK"
-      ]
+        "WAKE_LOCK",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyAE2VDeLrKdRCGfzUBacujqO3FhzLTjKHY"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -54,6 +68,13 @@
           "color": "#0066cc"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "ebc5f21d-48e0-4eaf-a818-9e2a09456fd0"
+      }
+    },
+    "owner": "w4n73d"
   }
 }

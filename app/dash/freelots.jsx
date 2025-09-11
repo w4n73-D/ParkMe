@@ -23,12 +23,28 @@ const lotImages = [
   require("../../assets/lots/lot4.jpg"),
 ];
 
-// Map each parking lot image to a camera index
-const lotCameraMapping = {
-  0: 0, // lot1.jpg uses camera index 0
-  1: 1, // lot2.jpg uses camera index 1
-  2: 2, // lot3.jpg uses camera index 2
-  3: 3, // lot4.jpg uses camera index 3
+// Map each parking lot image to a camera index AND lot name
+const lotConfigurations = {
+  0: { 
+    cameraIndex: 0, 
+    name: "College of Science", 
+    shortName: "Front Parking Lot" 
+  },
+  1: { 
+    cameraIndex: 1, 
+    name: "New Pharmacy Block", 
+    shortName: "Side Parking Lot" 
+  },
+  2: { 
+    cameraIndex: 2, 
+    name: "Pharmacy Building", 
+    shortName: "Front Parking Lot" 
+  },
+  3: { 
+    cameraIndex: 3, 
+    name: "Sports Complex Parking", 
+    shortName: "Sports Complex" 
+  },
 };
 
 const FreeLots = () => {
@@ -73,8 +89,10 @@ const FreeLots = () => {
 
   const saveParkingHistory = async (lotNumber, freeSpots, totalSpots = "N/A") => {
     try {
+      const lotConfig = lotConfigurations[lotNumber - 1];
       const historyItem = {
         lotNumber,
+        lotName: lotConfig.name,
         freeSpots,
         totalSpots,
         timestamp: new Date().toISOString(),
@@ -103,7 +121,7 @@ const FreeLots = () => {
 
     try {
       // Get the camera index for this parking lot
-      const cameraIndex = lotCameraMapping[index] || 0;
+      const cameraIndex = lotConfigurations[index].cameraIndex;
       
       // Call the new API endpoint
       const response = await ParkingAPI.getParkingStatus(cameraIndex);
@@ -116,10 +134,12 @@ const FreeLots = () => {
         
         const paramsForNextPage = {
           free_spots: response.emptySlots.toString(),
-          total_spots: "N/A", // You might want to calculate this from predictions
-          processed_image: response.image, // base64 encoded image with boxes
+          total_spots: "N/A",
+          processed_image: response.image,
           timestamp: response.timestamp,
           message: response.message,
+          camera_index: cameraIndex.toString(),
+          lot_name: lotConfigurations[index].name, // Add lot name
         };
         
         router.push({
@@ -183,6 +203,8 @@ const FreeLots = () => {
           <View style={styles.gridContainer}>
             {filteredLots.map((image, index) => {
               const originalIndex = lotImages.indexOf(image);
+              const lotConfig = lotConfigurations[originalIndex];
+              
               return (
                 <TouchableOpacity
                   key={originalIndex}
@@ -192,8 +214,8 @@ const FreeLots = () => {
                 >
                   <Image source={image} style={styles.image} />
                   <View style={styles.imageOverlay}>
-                    <Text style={styles.imageText}>Lot {originalIndex + 1}</Text>
-                    <Text style={styles.cameraText}>Camera {lotCameraMapping[originalIndex]}</Text>
+                    <Text style={styles.imageText}>{lotConfig.name}</Text>
+                    <Text style={styles.cameraText}>{lotConfig.shortName}</Text>
                   </View>
                   
                   <TouchableOpacity 
@@ -232,6 +254,9 @@ const FreeLots = () => {
           </Text>
           <Text style={styles.infoText}>
             ❤️ Tap the heart icon to add to favorites
+          </Text>
+          <Text style={styles.infoText}>
+            🗺️ Get turn-by-turn directions after analysis
           </Text>
         </View>
       </ScrollView>
@@ -330,6 +355,7 @@ const styles = StyleSheet.create({
   cameraText: {
     color: "rgba(255,255,255,0.8)",
     fontSize: 12,
+    fontStyle: "italic",
   },
   favoriteButton: {
     position: "absolute",

@@ -1,30 +1,34 @@
 // services/NotificationService.js
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
-import { Platform } from "react-native";
+import Constants from "expo-constants";
+import { Alert, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-// Configure notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 class NotificationService {
   constructor() {
     this.expoPushToken = null;
     this.notificationListener = null;
     this.responseListener = null;
+    this.isInitialized = false;
   }
 
   // Initialize notification service
   async initialize() {
+    if (this.isInitialized) return true;
+    
     try {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
+      // Set notification handler
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+
+      // Request permissions
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
       if (existingStatus !== "granted") {
@@ -33,17 +37,31 @@ class NotificationService {
       }
 
       if (finalStatus !== "granted") {
-        console.log("Failed to get push token for push notification!");
-        return false;
+        console.log("Notification permissions not granted");
+        this.isInitialized = true;
+        return true; // Continue with local notifications
       }
 
-      if (Device.isDevice) {
-        this.expoPushToken = await Notifications.getExpoPushTokenAsync({
-          projectId: "your-project-id",
-        });
-        await AsyncStorage.setItem("pushToken", this.expoPushToken.data);
-      } else {
-        console.log("Must use physical device for Push Notifications");
+      // Try to get push token but don't fail if it doesn't work
+      try {
+        if (Device.isDevice) {
+          const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+          
+          // Only try to get push token if we have a valid projectId
+          if (projectId && this.isValidUUID(projectId)) {
+            this.expoPushToken = await Notifications.getExpoPushTokenAsync({
+              projectId: projectId,
+            });
+            await AsyncStorage.setItem("pushToken", this.expoPushToken.data);
+            console.log("Expo Push Token obtained successfully");
+          } else {
+            console.warn("Invalid or missing projectId, using local notifications only");
+          }
+        } else {
+          console.log("Must use physical device for Push Notifications");
+        }
+      } catch (tokenError) {
+        console.warn("Push notifications not available, using local notifications only:", tokenError.message);
       }
 
       this.setupNotificationListeners();
@@ -57,11 +75,21 @@ class NotificationService {
         });
       }
 
+      this.isInitialized = true;
+      console.log("Notifications initialized successfully");
       return true;
+
     } catch (error) {
-      console.error("Error initializing notifications:", error);
+      console.warn("Error initializing notifications, continuing without them:", error.message);
+      this.isInitialized = true; // Still mark as initialized to prevent repeated attempts
       return false;
     }
+  }
+
+  // Helper function to validate UUID format
+  isValidUUID(uuid) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
   }
 
   // Set up notification listeners
@@ -108,157 +136,63 @@ class NotificationService {
     }
   }
 
-  // Send nearby parking notification with real data
-  async sendNearbyParkingNotification(spotName, distance, availableSpots) {
+  // Send local notification (works without push token)
+  async sendLocalNotification(title, body, data = {}) {
     try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Parking Spot Nearby! 🎯",
-          body: `${spotName} - ${availableSpots} spots available (${distance}m away)`,
-          data: {
-            type: "nearby_parking",
-            spotName,
-            distance,
-            availableSpots
-          },
-          sound: "default",
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error("Error sending nearby parking notification:", error);
-    }
-  }
+      if (!this.isInitialized) {
+        await this.initialize();
+      }
 
-  // Send notification when user finds a parking spot
-  async sendParkingSpotFoundNotification(spotName, address, availableSpots = 0) {
-    try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: "Parking Spot Found! ✅",
-          body: `Great! You found ${availableSpots} spots at ${spotName}, ${address}`,
-          data: {
-            type: "parking_spot_found",
-            spotName,
-            address,
-            availableSpots
-          },
-          sound: "default",
+          title: title,
+          body: body,
+          data: data,
+          sound: true,
         },
         trigger: null,
       });
+      
+      console.log('Local notification sent:', title);
     } catch (error) {
-      console.error("Error sending parking spot found notification:", error);
-    }
-  }
-
-  // Send proximity notification when user is near parking lots
-  async sendProximityNotification(title, body) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: title || "🚗 Parking Nearby!",
-          body: body || "You're close to available parking spots",
-          data: { type: "proximity_alert" },
-          sound: "default",
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error("Error sending proximity notification:", error);
+      console.warn('Error sending local notification, using alert fallback:', error.message);
+      // Fallback to alert
+      Alert.alert(title, body);
     }
   }
 
   // Send welcome notification
   async sendWelcomeNotification(userName) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Welcome to ParkMe! 🚗",
-          body: `Hi ${userName}, welcome back! Ready to find the perfect parking spot?`,
-          data: { type: "welcome" },
-          sound: "default",
-        },
-        trigger: { seconds: 5 },
-      });
-    } catch (error) {
-      console.error("Error sending welcome notification:", error);
-    }
+    await this.sendLocalNotification(
+      'Welcome to ParkMe! 🚗',
+      `Hi ${userName}, welcome back! Ready to find the perfect parking spot?`,
+      { type: 'welcome' }
+    );
   }
 
-  // Send parking session reminder
-  async sendParkingReminderNotification(spotName, timeRemaining) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: "Parking Session Reminder ⏰",
-          body: `Your parking at ${spotName} expires in ${timeRemaining} minutes`,
-          data: {
-            type: "parking_reminder",
-            spotName,
-            timeRemaining,
-          },
-          sound: "default",
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error("Error sending parking reminder notification:", error);
-    }
-  }
-
-  // Send custom notification
-  async sendCustomNotification(title, body, data = {}) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data,
-          sound: "default",
-        },
-        trigger: null,
-      });
-    } catch (error) {
-      console.error("Error sending custom notification:", error);
-    }
-  }
-
-  // Schedule notification for later
-  async scheduleNotification(title, body, trigger, data = {}) {
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title,
-          body,
-          data,
-          sound: "default",
-        },
-        trigger,
-      });
-    } catch (error) {
-      console.error("Error scheduling notification:", error);
-    }
-  }
-
-  // Cancel all notifications
-  async cancelAllNotifications() {
-    try {
-      await Notifications.cancelAllScheduledNotificationsAsync();
-    } catch (error) {
-      console.error("Error canceling notifications:", error);
-    }
-  }
-
-  // Get push token
-  getPushToken() {
-    return this.expoPushToken?.data;
+  // Send proximity notification
+  async sendProximityNotification(title, body) {
+    await this.sendLocalNotification(
+      title || '🚗 Parking Nearby!',
+      body || "You're close to available parking spots",
+      { type: 'proximity_alert' }
+    );
   }
 
   // Clean up listeners
   cleanup() {
     this.notificationListener?.remove();
     this.responseListener?.remove();
+  }
+
+  // Check if push notifications are available
+  hasPushNotifications() {
+    return this.expoPushToken !== null;
+  }
+
+  // Get push token
+  getPushToken() {
+    return this.expoPushToken?.data;
   }
 }
 

@@ -8,6 +8,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from "react-native";
 import React, { useState, useEffect, useRef } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,20 +19,27 @@ import notificationService from "../services/NotificationService";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "expo-router";
 
+// Parking lot coordinates
+const PARKING_LOTS = {
+  0: { latitude: 6.672834, longitude: -1.567513, name: "Lot 1", address: "Main Campus Parking" },
+  1: { latitude: 6.673834, longitude: -1.568513, name: "Lot 2", address: "Science Block Parking" },
+  2: { latitude: 6.674834, longitude: -1.569513, name: "Lot 3", address: "Library Parking" },
+  3: { latitude: 6.675834, longitude: -1.570513, name: "Lot 4", address: "Sports Complex Parking" },
+};
+
 const Dashboard = () => {
-  const [isLocationTracking, setIsLocationTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [nearbySpots, setNearbySpots] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [serverStatus, setServerStatus] = useState("checking");
+  const [selectedLot, setSelectedLot] = useState(null);
   const mapRef = useRef(null);
   const router = useRouter();
   const { user } = useAuth();
 
   const [region, setRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
+    latitude: 6.672834,
+    longitude: -1.567513,
     latitudeDelta: 0.0922,
     longitudeDelta: 0.0421,
   });
@@ -146,43 +155,8 @@ const Dashboard = () => {
     }
   };
 
-  const startLocationTracking = async () => {
-    setLoading(true);
-    try {
-      const success = await locationService.startLocationTracking();
-      if (success) {
-        setIsLocationTracking(true);
-        setConnectionStatus("connected");
-        Alert.alert(
-          "Location Tracking Started",
-          "You'll now receive notifications when you're near parking spots!"
-        );
-      } else {
-        Alert.alert(
-          "Permission Required",
-          "Please enable location permissions to use this feature."
-        );
-      }
-    } catch (error) {
-      console.error("Error starting location tracking:", error);
-      Alert.alert("Error", "Failed to start location tracking");
-      setConnectionStatus("error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const stopLocationTracking = () => {
-    locationService.stopLocationTracking();
-    setIsLocationTracking(false);
-    setConnectionStatus("disconnected");
-    Alert.alert(
-      "Location Tracking Stopped",
-      "You'll no longer receive parking notifications."
-    );
-  };
-
   const handleParkingLotPress = (spot) => {
+    setSelectedLot(spot);
     Alert.alert(
       spot.name,
       `${spot.availableSpots} spots available\n${spot.distance}m away`,
@@ -190,6 +164,14 @@ const Dashboard = () => {
         {
           text: "View Details",
           onPress: () => navigateToLotDetails(spot)
+        },
+        {
+          text: "Navigate",
+          onPress: () => navigateToParkingLot(spot)
+        },
+        {
+          text: "Open in Maps",
+          onPress: () => openGoogleMapsNavigation(spot)
         },
         {
           text: "Cancel",
@@ -213,23 +195,37 @@ const Dashboard = () => {
     });
   };
 
-  const testServerConnection = async () => {
-    setLoading(true);
-    try {
-      const result = await locationService.testServerConnection();
-      if (result) {
-        setServerStatus("connected");
-        Alert.alert("Success", "Connected to server successfully!");
-      } else {
-        setServerStatus("disconnected");
-        Alert.alert("Error", "Could not connect to server");
-      }
-    } catch (error) {
-      setServerStatus("error");
-      Alert.alert("Error", "Connection test failed");
-    } finally {
-      setLoading(false);
+  const navigateToParkingLot = (spot) => {
+    if (mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+          latitudeDelta: 0.005,
+          longitudeDelta: 0.005,
+        },
+        1000
+      );
     }
+  };
+
+  const navigateToFreeLots = () => {
+    router.push("/dash/freelots");
+  };
+
+  const openGoogleMapsNavigation = (lot) => {
+    const url = Platform.select({
+      ios: `maps://app?daddr=${lot.latitude},${lot.longitude}&dirflg=d`,
+      android: `google.navigation:q=${lot.latitude},${lot.longitude}`,
+    });
+    
+    Linking.openURL(url).catch(err => {
+      // Fallback to web Google Maps
+      const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${lot.latitude},${lot.longitude}&travelmode=driving`;
+      Linking.openURL(webUrl).catch(err => {
+        Alert.alert("Error", "Could not open maps application");
+      });
+    });
   };
 
   const getStatusColor = () => {
@@ -270,9 +266,6 @@ const Dashboard = () => {
                 ? "Using demo data - server not connected"
                 : "Checking server connection..."}
             </Text>
-            <TouchableOpacity onPress={testServerConnection}>
-              <Ionicons name="refresh" size={20} color="white" />
-            </TouchableOpacity>
           </View>
         )}
 
@@ -284,6 +277,11 @@ const Dashboard = () => {
             showsUserLocation={true}
             showsMyLocationButton={false}
             showsPointsOfInterest={false}
+            showsCompass={true}
+            showsScale={true}
+            loadingEnabled={true}
+            loadingIndicatorColor="#0066cc"
+            loadingBackgroundColor="#f5f5f5"
           >
             {currentLocation && (
               <Circle
@@ -304,7 +302,7 @@ const Dashboard = () => {
                 onPress={() => handleParkingLotPress(spot)}
                 pinColor={spot.availableSpots > 0 ? "#28a745" : "#dc3545"}
               >
-                <Callout>
+                <Callout tooltip>
                   <View style={styles.calloutContainer}>
                     <Text style={styles.calloutTitle}>{spot.name}</Text>
                     <Text style={styles.calloutText}>
@@ -316,6 +314,13 @@ const Dashboard = () => {
                     {spot.address && (
                       <Text style={styles.calloutAddress}>{spot.address}</Text>
                     )}
+                    <TouchableOpacity 
+                      style={styles.navigateButton}
+                      onPress={() => openGoogleMapsNavigation(spot)}
+                    >
+                      <Ionicons name="navigate" size={16} color="white" />
+                      <Text style={styles.navigateButtonText}>Open in Maps</Text>
+                    </TouchableOpacity>
                   </View>
                 </Callout>
               </Marker>
@@ -361,26 +366,15 @@ const Dashboard = () => {
           </View>
         </View>
 
+        {/* Controls Container */}
         <View style={styles.controlsContainer}>
           <TouchableOpacity
-            style={[
-              styles.button,
-              isLocationTracking ? styles.secondaryButton : styles.primaryButton,
-            ]}
-            onPress={isLocationTracking ? stopLocationTracking : startLocationTracking}
+            style={[styles.button, styles.selectLotButton]}
+            onPress={navigateToFreeLots}
             disabled={loading}
           >
-            <Ionicons
-              name={isLocationTracking ? "stop-circle" : "play-circle"}
-              size={24}
-              color={isLocationTracking ? "#0066cc" : "white"}
-            />
-            <Text style={[
-              styles.buttonText,
-              isLocationTracking && styles.secondaryButtonText,
-            ]}>
-              {isLocationTracking ? "Stop Tracking" : "Start Tracking"}
-            </Text>
+            <Ionicons name="list" size={24} color="white" />
+            <Text style={styles.buttonText}>Select Lot</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -392,14 +386,16 @@ const Dashboard = () => {
             <Text style={styles.buttonText}>Refresh</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.button, styles.testButton]}
-            onPress={testServerConnection}
-            disabled={loading}
-          >
-            <Ionicons name="server" size={24} color="white" />
-            <Text style={styles.buttonText}>Test Server</Text>
-          </TouchableOpacity>
+          {selectedLot && (
+            <TouchableOpacity
+              style={[styles.button, styles.navigateButton]}
+              onPress={() => openGoogleMapsNavigation(selectedLot)}
+              disabled={loading}
+            >
+              <Ionicons name="navigate" size={24} color="white" />
+              <Text style={styles.buttonText}>Navigate</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -533,31 +529,26 @@ const styles = StyleSheet.create({
     gap: 8,
     flex: 1,
   },
-  primaryButton: {
+  selectLotButton: {
     backgroundColor: "#0066cc",
-  },
-  secondaryButton: {
-    backgroundColor: "white",
-    borderWidth: 1,
-    borderColor: "#0066cc",
   },
   refreshButton: {
     backgroundColor: "#28a745",
   },
-  testButton: {
-    backgroundColor: "#6f42c1",
+  navigateButton: {
+    backgroundColor: "#ff6b35",
   },
   buttonText: {
     color: "white",
     fontSize: 14,
     fontWeight: "600",
   },
-  secondaryButtonText: {
-    color: "#0066cc",
-  },
   calloutContainer: {
-    width: 200,
-    padding: 10,
+    width: 220,
+    padding: 15,
+    backgroundColor: "white",
+    borderRadius: 10,
+    elevation: 5,
   },
   calloutTitle: {
     fontWeight: "bold",
@@ -574,6 +565,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#666",
     fontStyle: "italic",
+    marginBottom: 10,
+  },
+  navigateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#0066cc",
+    padding: 8,
+    borderRadius: 5,
+    justifyContent: "center",
+    gap: 5,
+  },
+  navigateButtonText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
 
