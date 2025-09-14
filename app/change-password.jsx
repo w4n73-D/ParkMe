@@ -10,17 +10,15 @@ import {
 } from "react-native";
 import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
+import { useAuth } from "./context/AuthContext";
 
 const ChangePassword = () => {
   const [loading, setLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
-  const API_URL = "https://parkme-api-hk4a.onrender.com";
-  // const API_URL = "http://localhost:3000";
+  const { updatePassword } = useAuth();
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -33,28 +31,11 @@ const ChangePassword = () => {
       return;
     }
 
+    // For Supabase, we don't need the current password to update it
+    // The user is already authenticated with their session
     try {
       setLoading(true);
-      const userData = await AsyncStorage.getItem("user");
-      const userId = JSON.parse(userData).id;
-
-      const response = await fetch(
-        `${API_URL}/user/${userId}/change-password`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            oldPassword: currentPassword,
-            newPassword: newPassword,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to change password");
-      }
+      await updatePassword(newPassword);
 
       Alert.alert("Success", "Password changed successfully", [
         {
@@ -92,17 +73,6 @@ const ChangePassword = () => {
         </View>
 
         <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Current Password</Text>
-            <TextInput
-              style={styles.input}
-              secureTextEntry
-              value={currentPassword}
-              onChangeText={setCurrentPassword}
-              placeholder="Enter current password"
-            />
-          </View>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>New Password</Text>
             <TextInput

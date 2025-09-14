@@ -1,10 +1,31 @@
-import { StyleSheet, Text, View } from "react-native";
-import React from "react";
-import { Stack, Tabs } from "expo-router";
-import { AuthProvider } from "./context/AuthContext";
+import { StyleSheet, Text, View, Linking } from "react-native";
+import React, { useEffect } from "react";
+import { Stack, useRouter } from "expo-router";
+import { AuthProvider } from "./context/AuthContext"; // Corrected import path
 import AuthWrapper from "./components/AuthWrapper";
+import { supabase } from "../lib/supabase"; // Import supabase
 
 const RootLayout = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Listen for URL events (for password reset deep linking)
+    const subscription = Linking.addEventListener('url', (event) => {
+      const url = new URL(event.url);
+      
+      // Handle password reset
+      if (url.pathname.includes('/reset-password')) {
+        router.replace('/reset-password');
+      }
+    });
+
+    return () => {
+      if (subscription) {
+        subscription.remove();
+      }
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <AuthWrapper>
@@ -28,6 +49,10 @@ const RootLayout = () => {
           <Stack.Screen
             name="forgotpassword"
             options={{ title: "Forgot Password", headerShown: false }}
+          />
+          <Stack.Screen
+            name="reset-password"
+            options={{ title: "Reset Password", headerShown: false }}
           />
           <Stack.Screen
             name="dash"

@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { Link, useRouter } from 'expo-router';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from './context/AuthContext';
 
 const ForgotPassword = () => {
   const router = useRouter();
+  const { resetPassword } = useAuth();
   const [email, setEmail] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const validateEmail = () => {
     if (!email) {
@@ -19,13 +22,21 @@ const ForgotPassword = () => {
     return true;
   };
 
-  const handleResetPassword = () => {
-    if (validateEmail()) {
+  const handleResetPassword = async () => {
+    if (!validateEmail()) return;
+    
+    setIsLoading(true);
+    try {
+      await resetPassword(email);
       Alert.alert(
         'Reset Link Sent',
         `Password reset instructions sent to ${email}`,
         [{ text: 'OK', onPress: () => router.back() }]
       );
+    } catch (error) {
+      Alert.alert('Error', error.message || 'Failed to send reset email');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -54,10 +65,15 @@ const ForgotPassword = () => {
         
         {/* Reset Button */}
         <TouchableOpacity 
-          style={styles.button} 
+          style={[styles.button, isLoading && styles.buttonDisabled]} 
           onPress={handleResetPassword}
+          disabled={isLoading}
         >
-          <Text style={styles.buttonText}>Send Reset Link</Text>
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Send Reset Link</Text>
+          )}
         </TouchableOpacity>
         
         {/* Back to Login */}
@@ -115,6 +131,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 10,
     marginBottom: 20,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: 'white',

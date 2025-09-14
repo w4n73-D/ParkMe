@@ -15,12 +15,11 @@ import {
 import { Link, useRouter } from "expo-router";
 import Logo from "../assets/img/parkme_logo.png";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
-const API_URL = "https://parkme-api-hk4a.onrender.com";
-// const API_URL = "http://localhost:3000";
+import { useAuth } from "./context/AuthContext";
 
 const SignUp = () => {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -41,7 +40,6 @@ const SignUp = () => {
     { code: "+81", name: "Japan" },
     { code: "+33", name: "France" },
     { code: "+233", name: "Ghana" },
-    // Add more country codes as needed
   ];
 
   const validatePassword = (text) => {
@@ -105,33 +103,25 @@ const SignUp = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          email,
-          phone: `+${countryCode}${phone}`,
-          dob: dateOfBirth.toISOString(),
-          password,
-        }),
+      await signUp({
+        firstName,
+        lastName,
+        email,
+        phone: `${countryCode}${phone}`,
+        dob: dateOfBirth.toISOString(),
+        password,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Sign up failed");
-      }
-
-      Alert.alert("Success", "Account created successfully! Please log in.", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/login"),
-        },
-      ]);
+      Alert.alert(
+        "Success", 
+        "Account created successfully! Please check your email to confirm your account.", 
+        [
+          {
+            text: "OK",
+            onPress: () => router.replace("/login"),
+          },
+        ]
+      );
     } catch (error) {
       Alert.alert(
         "Error",

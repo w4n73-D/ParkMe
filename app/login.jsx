@@ -15,9 +15,6 @@ import { Link, useRouter } from "expo-router";
 import * as Location from "expo-location";
 import { useAuth } from "./context/AuthContext";
 
-const API_URL = "https://parkme-api-hk4a.onrender.com";
-// const API_URL = "http://localhost:3000";
-
 const LoginScreen = () => {
   const router = useRouter();
   const { login } = useAuth();
@@ -57,27 +54,8 @@ const LoginScreen = () => {
     setIsLoading(true);
     if (validateForm()) {
       try {
-        const response = await fetch(`${API_URL}/auth/login`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Login failed");
-        }
-
-        const data = await response.json();
-        console.log(data);
-
-        if (data.token) {
-          // Use the AuthContext to handle login
-          await login(data.user, data.token);
-          requestLocationPermission();
-        }
+        await login(email, password);
+        requestLocationPermission();
       } catch (error) {
         Alert.alert("Login failed", error.message);
       } finally {
@@ -141,7 +119,7 @@ const LoginScreen = () => {
       <View style={styles.innerContainer}>
         {/* Logo */}
         <Image
-          source={require("../assets/img/parkme_logo.png")} // Replace with your logo path
+          source={require("../assets/img/parkme_logo.png")}
           style={styles.logo}
           resizeMode="contain"
         />
