@@ -2,7 +2,7 @@
 import * as Location from "expo-location";
 import notificationService from "./NotificationService";
 
-const API_BASE_URL = "https://f01b74135650.ngrok-free.app"; // Change to your server IP if needed
+const API_BASE_URL = "https://b0c148c84337.ngrok-free.app"; // Change to your server IP if needed
 
 class LocationService {
   constructor() {

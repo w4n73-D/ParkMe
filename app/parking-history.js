@@ -71,24 +71,24 @@ const ParkingHistory = () => {
     return date.toLocaleString();
   };
 
-  const renderHistoryItem = ({ item }) => (
-    <View style={styles.historyItem}>
-      <View style={styles.historyItemHeader}>
-        <Text style={styles.lotName}>Lot {item.lotNumber}</Text>
-        <Text style={styles.timestamp}>{formatDate(item.timestamp)}</Text>
-      </View>
-      <View style={styles.historyItemDetails}>
-        <Text style={styles.detailText}>
-          Free spots: <Text style={styles.detailValue}>{item.freeSpots}</Text>
-        </Text>
-        {item.totalSpots && item.totalSpots !== "N/A" && (
-          <Text style={styles.detailText}>
-            Total spots: <Text style={styles.detailValue}>{item.totalSpots}</Text>
-          </Text>
-        )}
-      </View>
+const renderHistoryItem = ({ item }) => (
+  <View style={styles.historyItem}>
+    <View style={styles.historyItemHeader}>
+      <Text style={styles.lotName}>{item.lotName}</Text>
+      <Text style={styles.timestamp}>{formatDate(item.timestamp)}</Text>
     </View>
-  );
+    <View style={styles.historyItemDetails}>
+      <Text style={styles.detailText}>
+        Free spots: <Text style={styles.detailValue}>{item.freeSpots}</Text>
+      </Text>
+      {item.totalSpots && item.totalSpots !== "N/A" && (
+        <Text style={styles.detailText}>
+          Total spots: <Text style={styles.detailValue}>{item.totalSpots}</Text>
+        </Text>
+      )}
+    </View>
+  </View>
+);
 
   if (loading) {
     return (

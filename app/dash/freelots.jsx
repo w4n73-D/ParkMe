@@ -70,93 +70,113 @@ const FreeLots = () => {
     }
   };
 
-  const toggleFavorite = async (lotIndex) => {
-    try {
-      let newFavorites;
-      if (favorites.includes(lotIndex)) {
-        newFavorites = favorites.filter((fav) => fav !== lotIndex);
-      } else {
-        newFavorites = [...favorites, lotIndex];
-      }
-      
-      setFavorites(newFavorites);
-      await AsyncStorage.setItem("favoriteLots", JSON.stringify(newFavorites));
-    } catch (error) {
-      console.error("Error saving favorite:", error);
-      Alert.alert("Error", "Failed to update favorites");
+const toggleFavorite = async (lotIndex) => {
+  try {
+    const lotConfig = lotConfigurations[lotIndex];
+    let newFavorites;
+    let actionType;
+
+    if (favorites.includes(lotIndex)) {
+      newFavorites = favorites.filter((fav) => fav !== lotIndex);
+      actionType = "favorite_remove";
+    } else {
+      newFavorites = [...favorites, lotIndex];
+      actionType = "favorite_add";
     }
-  };
+    
+    setFavorites(newFavorites);
+    await AsyncStorage.setItem("favoriteLots", JSON.stringify(newFavorites));
+
+    // Track the favorite action (non-blocking)
+    ParkingAPI.trackUserAction({
+      actionType: actionType,
+      lotId: lotConfig.cameraIndex,
+      lotName: lotConfig.name,
+      userId: "current_user_id"
+    }).catch(error => {
+      console.log("Tracking failed but main action succeeded:", error);
+    });
+  } catch (error) {
+    console.error("Error saving favorite:", error);
+    Alert.alert("Error", "Failed to update favorites");
+  }
+};
 
   const saveParkingHistory = async (lotNumber, freeSpots, totalSpots = "N/A") => {
-    try {
-      const lotConfig = lotConfigurations[lotNumber - 1];
-      const historyItem = {
-        lotNumber,
-        lotName: lotConfig.name,
-        freeSpots,
-        totalSpots,
-        timestamp: new Date().toISOString(),
+  try {
+    const lotConfig = lotConfigurations[lotNumber - 1];
+    const historyItem = {
+      lotNumber: lotNumber,
+      lotName: lotConfig.name, // Store the actual name instead of "Lot X"
+      freeSpots: freeSpots,
+      totalSpots: totalSpots,
+      timestamp: new Date().toISOString(),
+    };
+
+    const storedHistory = await AsyncStorage.getItem("parkingHistory");
+    let history = storedHistory ? JSON.parse(storedHistory) : [];
+    
+    history.unshift(historyItem);
+    
+    if (history.length > 100) {
+      history = history.slice(0, 100);
+    }
+    
+    await AsyncStorage.setItem("parkingHistory", JSON.stringify(history));
+  } catch (error) {
+    console.error("Error saving parking history:", error);
+  }
+};
+
+const handleImagePress = async (index) => {
+  setSelectedImage(index);
+  setLoading(true);
+
+  try {
+    const lotConfig = lotConfigurations[index];
+    const cameraIndex = lotConfig.cameraIndex;
+    
+    // Track the lot visit (non-blocking)
+    ParkingAPI.trackUserAction({
+      actionType: "lot_visit",
+      lotId: cameraIndex,
+      lotName: lotConfig.name,
+      userId: "current_user_id"
+    }).catch(error => {
+      console.log("Tracking failed but main action succeeded:", error);
+    });
+
+    // Call the new API endpoint
+    const response = await ParkingAPI.getParkingStatus(cameraIndex);
+    
+    if (response.success) {
+      await saveParkingHistory(index + 1, response.emptySlots.toString(), lotConfig.name);
+      
+      const paramsForNextPage = {
+        free_spots: response.emptySlots.toString(),
+        total_spots: "N/A",
+        processed_image: response.image,
+        timestamp: response.timestamp,
+        message: response.message,
+        camera_index: cameraIndex.toString(),
+        lot_name: lotConfig.name,
       };
-
-      const storedHistory = await AsyncStorage.getItem("parkingHistory");
-      let history = storedHistory ? JSON.parse(storedHistory) : [];
       
-      // Add new item to beginning of array
-      history.unshift(historyItem);
-      
-      // Keep only last 100 items to prevent storage issues
-      if (history.length > 100) {
-        history = history.slice(0, 100);
-      }
-      
-      await AsyncStorage.setItem("parkingHistory", JSON.stringify(history));
-    } catch (error) {
-      console.error("Error saving parking history:", error);
+      router.push({
+        pathname: "/dash/lot-analysis",
+        params: paramsForNextPage,
+      });
+    } else {
+      throw new Error(response.message || "Failed to get parking status");
     }
-  };
-
-  const handleImagePress = async (index) => {
-    setSelectedImage(index);
-    setLoading(true);
-
-    try {
-      // Get the camera index for this parking lot
-      const cameraIndex = lotConfigurations[index].cameraIndex;
-      
-      // Call the new API endpoint
-      const response = await ParkingAPI.getParkingStatus(cameraIndex);
-      
-      console.log("API Response:", response);
-      
-      if (response.success) {
-        // Save to parking history
-        await saveParkingHistory(index + 1, response.emptySlots.toString());
-        
-        const paramsForNextPage = {
-          free_spots: response.emptySlots.toString(),
-          total_spots: "N/A",
-          processed_image: response.image,
-          timestamp: response.timestamp,
-          message: response.message,
-          camera_index: cameraIndex.toString(),
-          lot_name: lotConfigurations[index].name, // Add lot name
-        };
-        
-        router.push({
-          pathname: "/dash/lot-analysis",
-          params: paramsForNextPage,
-        });
-      } else {
-        throw new Error(response.message || "Failed to get parking status");
-      }
-    } catch (error) {
-      console.error("Processing error:", error);
-      Alert.alert("Error", error.message || "Failed to process parking lot");
-    } finally {
-      setLoading(false);
-      setSelectedImage(null);
-    }
-  };
+  } catch (error) {
+    console.error("Processing error:", error);
+    Alert.alert("Error", error.message || "Failed to process parking lot");
+  } finally {
+    setLoading(false);
+    setSelectedImage(null);
+  }
+};
 
   // Filter lots based on active tab
   const filteredLots = activeTab === "favorites" 
